@@ -51,7 +51,9 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.naive_bayes import MultinomialNB
+
 import ipdb
+from pprint import pprint
 
 MLCOMP = os.path.abspath(os.path.join(__file__, '..', 'data'))
 
@@ -84,14 +86,18 @@ class MLComp:
     def extract_train_features(self): 
         print("Extracting train features from the dataset using a sparse vectorizer")
         t0 = time()
-        # I can instantiate the vectorize object without
+        # I can instantiate the vectorize object without needing to pass in anything
         self.vectorizer = TfidfVectorizer(encoding='latin1')
         
-        #See what the input files look like
-        train_input_strings = (open(f, encoding='latin-1').read() for f in self.news_train.filenames)
+        # See what the input files look like
+        # They're just strings. The vectorizer automatically splits them apart and does some processing
+        train_input_strings = list(open(f, encoding='latin-1').read() for f in self.news_train.filenames)
+        ipdb.set_trace()
+
         self.X_train = self.vectorizer.fit_transform(train_input_strings)
         print("done in %fs" % (time() - t0))
         print("n_samples: %d, n_features: %d" % self.X_train.shape)
+
         assert sp.issparse(self.X_train)
         self.y_train = self.news_train.target
         return 
