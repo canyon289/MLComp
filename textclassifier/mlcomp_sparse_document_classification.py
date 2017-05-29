@@ -55,93 +55,120 @@ import ipdb
 
 MLCOMP = os.path.abspath(os.path.join(__file__, '..', 'data'))
 
-print(__doc__)
-"""
-if 'MLCOMP_DATASETS_HOME' not in os.environ:
-    print("MLCOMP_DATASETS_HOME not set; please follow the above instructions")
-    sys.exit(0)
-"""
+# print(__doc__)
 
-###############################################################################
-# Benchmark classifiers
-def benchmark(clf_class, params, name):
-    print("parameters:", params)
-    t0 = time()
-    clf = clf_class(**params).fit(X_train, y_train)
-    print("done in %fs" % (time() - t0))
+class MLComp:
 
-    if hasattr(clf, 'coef_'):
-        print("Percentage of non zeros coef: %f"
-              % (np.mean(clf.coef_ != 0) * 100))
-    print("Predicting the outcomes of the testing set")
-    t0 = time()
-    pred = clf.predict(X_test)
-    print("done in %fs" % (time() - t0))
+    def __init__(self):
+        """ML Comp training class.
+        Decided on class so I can introspect each variable and see what
+        it's doing
+        """
+        self.load_data()
+        self.extract_train_features()
+        self.extract_test_features()
+        self.run_sgd()
+        return
 
-    print("Classification report on test set for classifier:")
-    print(clf)
-    print()
-    print(classification_report(y_test, pred,
-                                target_names=news_test.target_names))
+    def load_data(self):
+        """Load the news_train file to see how it's structured"""
+        # Load the training set
+        print("Loading 20 newsgroups training set... ")
+        self.news_train = load_mlcomp('20news-18828', 'train', mlcomp_root=MLCOMP)
+        print(self.news_train.DESCR)
+        print("%d documents" % len(self.news_train.filenames))
+        print("%d categories" % len(self.news_train.target_names))
+        
+        return self.news_train
+    
+    def extract_train_features(self): 
+        print("Extracting train features from the dataset using a sparse vectorizer")
+        t0 = time()
+        # I can instantiate the vectorize object without
+        self.vectorizer = TfidfVectorizer(encoding='latin1')
+        
+        #See what the input files look like
+        train_input_strings = (open(f, encoding='latin-1').read() for f in self.news_train.filenames)
+        self.X_train = self.vectorizer.fit_transform(train_input_strings)
+        print("done in %fs" % (time() - t0))
+        print("n_samples: %d, n_features: %d" % self.X_train.shape)
+        assert sp.issparse(self.X_train)
+        self.y_train = self.news_train.target
+        return 
 
-    cm = confusion_matrix(y_test, pred)
-    print("Confusion matrix:")
-    print(cm)
+    def extract_test_features(self):
 
-    # Show confusion matrix
-    plt.matshow(cm)
-    plt.title('Confusion matrix of the %s classifier' % name)
-    plt.colorbar()
+        print("Loading 20 newsgroups test set... ")
+        self.news_test = load_mlcomp('20news-18828', 'test', mlcomp_root=MLCOMP)
+        t0 = time()
+        print("done in %fs" % (time() - t0))
 
+        print("Predicting the labels of the test set...")
+        print("%d documents" % len(self.news_test.filenames))
+        print("%d categories" % len(self.news_test.target_names))
 
-# Load the training set
-print("Loading 20 newsgroups training set... ")
-news_train = load_mlcomp('20news-18828', 'train', mlcomp_root=MLCOMP)
-print(news_train.DESCR)
-print("%d documents" % len(news_train.filenames))
-print("%d categories" % len(news_train.target_names))
+        print("Extracting features from the dataset using the same vectorizer")
+        t0 = time()
+        
+        # Read in test data
+        test_input_strings = (open(f, encoding='latin-1').read() for f in self.news_test.filenames)
+        self.X_test = self.vectorizer.transform(test_input_strings)
+        self.y_test = self.news_test.target
+        print("done in %fs" % (time() - t0))
+        print("n_samples: %d, n_features: %d" % self.X_test.shape)
+        return
 
-print("Extracting features from the dataset using a sparse vectorizer")
-t0 = time()
-vectorizer = TfidfVectorizer(encoding='latin1')
-X_train = vectorizer.fit_transform((open(f, encoding='latin-1').read()
-                                    for f in news_train.filenames))
-print("done in %fs" % (time() - t0))
-print("n_samples: %d, n_features: %d" % X_train.shape)
-assert sp.issparse(X_train)
-y_train = news_train.target
+    def run_sgd(self):
+        print("Testbenching a linear classifier...")
+        parameters = {
+            'loss': 'hinge',
+            'penalty': 'l2',
+            'n_iter': 50,
+            'alpha': 0.00001,
+            'fit_intercept': True,
+        }
 
-print("Loading 20 newsgroups test set... ")
-news_test = load_mlcomp('20news-18828', 'test' ,mlcomp_root=MLCOMP)
-t0 = time()
-print("done in %fs" % (time() - t0))
+        self.benchmark(SGDClassifier, parameters, 'SGD')
 
-print("Predicting the labels of the test set...")
-print("%d documents" % len(news_test.filenames))
-print("%d categories" % len(news_test.target_names))
+    def run_multinominal(self):
+        print("Testbenching a MultinomialNB classifier...")
+        parameters = {'alpha': 0.01}
 
-print("Extracting features from the dataset using the same vectorizer")
-t0 = time()
-X_test = vectorizer.transform((open(f, encoding='latin-1').read() for f in news_test.filenames))
-y_test = news_test.target
-print("done in %fs" % (time() - t0))
-print("n_samples: %d, n_features: %d" % X_test.shape)
+        self.benchmark(MultinomialNB, parameters, 'MultinomialNB')
 
-print("Testbenching a linear classifier...")
-parameters = {
-    'loss': 'hinge',
-    'penalty': 'l2',
-    'n_iter': 50,
-    'alpha': 0.00001,
-    'fit_intercept': True,
-}
+        return
 
-benchmark(SGDClassifier, parameters, 'SGD')
+    def benchmark(self, clf_class, params, name):
+        """Benchmark classifiers"""
+        
+        print("parameters:", params)
+        t0 = time()
+        clf = clf_class(**params).fit(self.X_train, self.y_train)
+        print("done in %fs" % (time() - t0))
 
-print("Testbenching a MultinomialNB classifier...")
-parameters = {'alpha': 0.01}
+        if hasattr(clf, 'coef_'):
+            print("Percentage of non zeros coef: %f"
+                  % (np.mean(clf.coef_ != 0) * 100))
 
-benchmark(MultinomialNB, parameters, 'MultinomialNB')
+        print("Predicting the outcomes of the testing set")
+        t0 = time()
+        pred = clf.predict(self.X_test)
+        print("done in %fs" % (time() - t0))
 
-plt.show()
+        print("Classification report on test set for classifier:")
+        print(clf)
+        print()
+        print(classification_report(self.y_test, pred,
+                                    target_names=self.news_test.target_names))
+
+        cm = confusion_matrix(self.y_test, pred)
+        print("Confusion matrix:")
+        print(cm)
+
+        # Show confusion matrix
+        plt.matshow(cm)
+        plt.title('Confusion matrix of the %s classifier' % name)
+        plt.colorbar()
+
+        plt.show()
 
