@@ -39,8 +39,8 @@ train_data = xgb.DMatrix(df_features.values, label=train_targets)
 
 # Generic parameters
 param = {'max_depth':5,
-        'objective':'reg:linear',
-        #'objective':'multi:softprob','num_class':2,
+        #'objective':'reg:linear',
+        'objective':'multi:softprob','num_class':2,
         'eta':.3,
         'silent':0,
         'colsample_bytree':.2,
@@ -49,3 +49,4 @@ param = {'max_depth':5,
 m = xgb.train(params = param, dtrain = train_data)
 print(df_features.columns)
 print(m.get_fscore())
+xgb.to_graphviz(m, num_trees=2)
