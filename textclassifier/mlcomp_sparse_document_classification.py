@@ -51,6 +51,7 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.naive_bayes import MultinomialNB
+import pickle
 
 import ipdb
 from pprint import pprint
@@ -69,8 +70,36 @@ class MLComp:
         self.load_data()
         self.extract_train_features()
         self.extract_test_features()
-        self.run_sgd()
+        self.run_xgb()
         return
+
+    def run_xgb(self):
+        from xgboost.sklearn import XGBClassifier
+        parameters = {'max_depth':100,
+                    'learning_rate':0.3,
+                    'n_estimators':1,
+                    'silent':False,
+                    'objective':"multi:softprob",
+                    #'num_class':20,
+                    #'booster':'gbtree',
+                    'n_jobs':8,
+                    #'nthread':4,
+                    'gamma':0, 
+                    'min_child_weight':1,
+                    'max_delta_step':0,
+                    'subsample':1,
+                    'colsample_bytree':1,
+                    'colsample_bylevel':1,
+                    'reg_alpha':0,
+                    'reg_lambda':1,
+                    'scale_pos_weight':1,
+                    'base_score':0.5,
+                    #'random_state':0,
+                    'seed':0,
+                    'missing':None
+                    }
+        self.benchmark(XGBClassifier, parameters, 'XGBoost Classifier')
+        return 
 
     def load_data(self):
         """Load the news_train file to see how it's structured"""
@@ -92,7 +121,6 @@ class MLComp:
         # See what the input files look like
         # They're just strings. The vectorizer automatically splits them apart and does some processing
         train_input_strings = list(open(f, encoding='latin-1').read() for f in self.news_train.filenames)
-        ipdb.set_trace()
 
         self.X_train = self.vectorizer.fit_transform(train_input_strings)
         print("done in %fs" % (time() - t0))
@@ -150,6 +178,7 @@ class MLComp:
         print("parameters:", params)
         t0 = time()
         clf = clf_class(**params).fit(self.X_train, self.y_train)
+        pickle.dump(clf, open("../clf.p", "wb"))
         print("done in %fs" % (time() - t0))
 
         if hasattr(clf, 'coef_'):
