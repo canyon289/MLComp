@@ -178,8 +178,13 @@ class MLComp:
         print("parameters:", params)
         t0 = time()
         clf = clf_class(**params).fit(self.X_train, self.y_train)
-        pickle.dump(clf, open("../clf.p", "wb"))
+        
+
         print("done in %fs" % (time() - t0))
+
+        # Make dictionary for pickling
+        d = {'clf':clf, 'params':params}
+        pickle.dump(d, open("clf.p", "wb"))
 
         if hasattr(clf, 'coef_'):
             print("Percentage of non zeros coef: %f"
