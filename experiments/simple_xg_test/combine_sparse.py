@@ -49,5 +49,6 @@ param = {'max_depth':5,
 m = xgb.train(params = param, dtrain = train_data)
 print(df_features.columns)
 print(m.get_fscore())
+
 def show_tree(i):
     xgb.to_graphviz(m, num_trees=i).render("Trees.gv", view=True)

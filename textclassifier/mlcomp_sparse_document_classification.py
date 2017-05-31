@@ -183,7 +183,7 @@ class MLComp:
         print("done in %fs" % (time() - t0))
 
         # Make dictionary for pickling
-        d = {'clf':clf, 'params':params}
+        d = {'clf':clf, 'params':params, 'vectorizer':self.vectorizer}
         pickle.dump(d, open("clf.p", "wb"))
 
         if hasattr(clf, 'coef_'):
