@@ -55,6 +55,8 @@ import pickle
 
 import ipdb
 from pprint import pprint
+from xgboost.sklearn import XGBClassifier
+import xgboost as xgb
 
 MLCOMP = os.path.abspath(os.path.join(__file__, '..', 'data'))
 
@@ -73,7 +75,6 @@ class MLComp:
         return
 
     def run_xgb(self, params):
-        from xgboost.sklearn import XGBClassifier
         if not params:
             params = {'max_depth':100,
                         'learning_rate':0.3,
@@ -176,9 +177,11 @@ class MLComp:
         """Benchmark classifiers"""
         
         print("parameters:", params)
+        self.params = params
+
         t0 = time()
         clf = clf_class(**params).fit(self.X_train, self.y_train)
-        
+        self.clf = clf 
 
         print("done in %fs" % (time() - t0))
 
@@ -190,34 +193,51 @@ class MLComp:
 
         print("Predicting the outcomes of the testing set")
         t0 = time()
-        pred = clf.predict(self.X_test)
+        self.pred = clf.predict(self.X_test)
+        self.pred_proba = clf.predict_proba(self.X_test)
         print("done in %fs" % (time() - t0))
 
         print("Classification report on test set for classifier:")
         print(clf)
         print()
-        print(classification_report(self.y_test, pred,
+        print(classification_report(self.y_test, self.pred,
                                     target_names=self.news_test.target_names))
 
-        cm = confusion_matrix(self.y_test, pred)
+        cm = confusion_matrix(self.y_test, self.pred)
+        self.cm = cm
         print("Confusion matrix:")
         print(cm)
 
         # Show confusion matrix
+        """
         plt.matshow(cm)
         plt.title('Confusion matrix of the %s classifier' % name)
         plt.colorbar()
 
         plt.show()
+        """
+        return 
 
-        if name == 'XGBoost Classifier':
-            model_dict = {'clf':clf,
-                          'params':params,
-                          'vectorizer':self.vectorizer,
-                          'test_pred':(self.y_test, pred),
-                          'confusion_matrix':cm
-                          }
-            labels = ['n_estimators','max_depth','learning_rate']
-            val = [params.get(v) for v in labels]
-            name = "xgb_ntrees_{0}_depth_{1}_eta_{2}".format(*val)
-            pickle.dump(model_dict, open(name + ".p", "wb"))
+    def pickle_xgb(self, pickle_path, tree_path):
+        model_dict = {'clf':self.clf,
+                      'params':self.params,
+                      'vectorizer':self.vectorizer,
+                      'test_pred':(self.y_test, self.pred),
+                      'self_prob_pred':self.pred_proba,
+                      'confusion_matrix':self.cm
+                      }
+        labels = ['n_estimators','max_depth','learning_rate']
+        val = [self.params.get(v) for v in labels]
+
+        file_name = "xgb_ntrees_{0}_depth_{1}_eta_{2}".format(*val)
+        pickle_path += file_name
+        pickle.dump(model_dict, open(pickle_path + file_name + ".p", "wb"))
+        
+        # Write Trees
+        self.clf.get_booster().feature_names = self.vectorizer.get_feature_names()
+        tree_path += file_name
+        xgb.to_graphviz(self.clf, num_trees=1).render(tree_path + ".gv")
+        xgb.plot_importance(self.clf, max_num_features = 20)
+        plt.show()
+        return
+    
