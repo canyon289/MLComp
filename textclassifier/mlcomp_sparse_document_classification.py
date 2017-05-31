@@ -70,35 +70,35 @@ class MLComp:
         self.load_data()
         self.extract_train_features()
         self.extract_test_features()
-        self.run_xgb()
         return
 
-    def run_xgb(self):
+    def run_xgb(self, params):
         from xgboost.sklearn import XGBClassifier
-        parameters = {'max_depth':100,
-                    'learning_rate':0.3,
-                    'n_estimators':1,
-                    'silent':False,
-                    'objective':"multi:softprob",
-                    #'num_class':20,
-                    #'booster':'gbtree',
-                    'n_jobs':8,
-                    #'nthread':4,
-                    'gamma':0, 
-                    'min_child_weight':1,
-                    'max_delta_step':0,
-                    'subsample':1,
-                    'colsample_bytree':1,
-                    'colsample_bylevel':1,
-                    'reg_alpha':0,
-                    'reg_lambda':1,
-                    'scale_pos_weight':1,
-                    'base_score':0.5,
-                    #'random_state':0,
-                    'seed':0,
-                    'missing':None
-                    }
-        self.benchmark(XGBClassifier, parameters, 'XGBoost Classifier')
+        if not params:
+            params = {'max_depth':100,
+                        'learning_rate':0.3,
+                        'n_estimators':1,
+                        'silent':False,
+                        'objective':"multi:softprob",
+                        #'num_class':20,
+                        #'booster':'gbtree',
+                        'n_jobs':8,
+                        #'nthread':4,
+                        'gamma':0, 
+                        'min_child_weight':1,
+                        'max_delta_step':0,
+                        'subsample':1,
+                        'colsample_bytree':1,
+                        'colsample_bylevel':1,
+                        'reg_alpha':0,
+                        'reg_lambda':1,
+                        'scale_pos_weight':1,
+                        'base_score':0.5,
+                        #'random_state':0,
+                        'seed':0,
+                        'missing':None
+                        }
+        self.benchmark(XGBClassifier, params, 'XGBoost Classifier')
         return 
 
     def load_data(self):
@@ -183,8 +183,6 @@ class MLComp:
         print("done in %fs" % (time() - t0))
 
         # Make dictionary for pickling
-        d = {'clf':clf, 'params':params, 'vectorizer':self.vectorizer}
-        pickle.dump(d, open("clf.p", "wb"))
 
         if hasattr(clf, 'coef_'):
             print("Percentage of non zeros coef: %f"
@@ -212,3 +210,14 @@ class MLComp:
 
         plt.show()
 
+        if name == 'XGBoost Classifier':
+            model_dict = {'clf':clf,
+                          'params':params,
+                          'vectorizer':self.vectorizer,
+                          'test_pred':(self.y_test, pred),
+                          'confusion_matrix':cm
+                          }
+            labels = ['n_estimators','max_depth','learning_rate']
+            val = [params.get(v) for v in labels]
+            name = "xgb_ntrees_{0}_depth_{1}_eta_{2}".format(*val)
+            pickle.dump(model_dict, open(name + ".p", "wb"))
