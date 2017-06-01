@@ -231,7 +231,7 @@ class MLComp:
 
         file_name = "xgb_ntrees_{0}_depth_{1}_eta_{2}".format(*val)
         pickle_path += file_name
-        pickle.dump(model_dict, open(pickle_path + file_name + ".p", "wb"))
+        pickle.dump(model_dict, open(pickle_path + ".p", "wb"))
         
         # Write Trees
         self.clf.get_booster().feature_names = self.vectorizer.get_feature_names()
