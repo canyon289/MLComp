@@ -11,8 +11,8 @@ from textclassifier import MLComp
 m = MLComp()
 
 params = {'max_depth':100,
-            'learning_rate':0.3,
-            'n_estimators':100,
+            'learning_rate':0.5,
+            'n_estimators':1,
             'silent':False,
             'objective':"multi:softprob",
             #'num_class':20,
