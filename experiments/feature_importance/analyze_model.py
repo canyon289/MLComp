@@ -1,7 +1,17 @@
 """
 Takes pickled model and shows feature breakdown
 """
+import sys
+import matplotlib.pyplot as plt
+import pickle
+import xgboost
 
 # Load in pickled model
-model = pickle.load(open("xgb_ntrees_1_depth_1_eta_0.3.p", 'rb'))
+file_name = sys.argv[1]
+print(file_name)
+d_clf= pickle.load(open(file_name, 'rb'))
+
+plt.matshow(d_clf["confusion_matrix"])
+plt.colorbar()
+plt.show()
 
